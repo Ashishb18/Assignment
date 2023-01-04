@@ -1,0 +1,80 @@
+
+To store a binary tree in a MongoDB database, you can create a collection with a document for each node in the tree. Each document should have the following fields:
+
+value: The value stored at the node.
+left: The ID of the document for the left child of the node.
+right: The ID of the document for the right child of the node.
+Here's an example of how you might create the collection and insert some documents:
+
+
+const mongoose = require('mongoose');
+
+const nodeSchema = new mongoose.Schema({
+  value: {
+    type: Number,
+    required: true,
+  },
+  left: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Node',
+  },
+  right: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Node',
+  },
+});
+
+const Node = mongoose.model('Node', nodeSchema);
+
+// Insert some documents
+const root = new Node({ value: 1 });
+const left = new Node({ value: 2 });
+const right = new Node({ value: 3 });
+
+root.left = left._id;
+root.right = right._id;
+
+left.left = new Node({ value: 4 })._id;
+left.right = new Node({ value: 5 })._id;
+
+right.left = new Node({ value: 6 })._id;
+right.right = new Node({ value: 7 })._id;
+
+root.save();
+left.save();
+right.save();
+
+
+To perform a breadth-first search on the tree, you can create an Express API route that takes a starting node ID as a parameter and returns the values of the nodes in a breadth-first order. Here's an example of how you might implement this route:
+
+
+const express = require('express');
+const router = express.Router();
+
+router.get('/breadth-first-search/:id', async (req, res) => {
+  try {
+    const root = await Node.findById(req.params.id);
+    if (!root) {
+      return res.status(404).send({ message: 'Node not found' });
+    }
+
+    const queue = [root];
+    const values = [];
+    while (queue.length > 0) {
+      const node = queue.shift();
+      values.push(node.value);
+      if (node.left) {
+        queue.push(node.left);
+      }
+      if (node.right) {
+        queue.push(node.right);
+      }
+    }
+    return res.send({ values });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({ message: 'Error performing search' });
+  }
+});
+
+module.exports = router;
